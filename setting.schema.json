@@ -1,0 +1,12 @@
+{
+  "id": "dependency_manager",
+  "title": "Dependency Manager",
+  "type": "object",
+  "properties": {
+    "activate_all_components_after_add_repo": {
+      "type": "boolean",
+      "title": "Activate all components",
+      "description": "Activate all components after repo is added"
+    }
+  }
+}
