@@ -14,7 +14,7 @@ public protocol MBDependencySearchEngine {
     var engineName: String { get }
     var enginePriority: Int { get }
     func getCurrentDependency(by names: [String]) throws -> Dependency?
-    func searchDependency(name: String, version: String?) throws -> (MBConfig.Repo, Date?)?
+    func searchDependency(name: String, version: String?, url: String?) throws -> (MBConfig.Repo, Date?)?
     func getCurrentDependenciesInSameRepo(by dependency: Dependency) -> [Dependency]
 }
 
@@ -37,13 +37,15 @@ extension MBWorkspace {
 
     open func searchDependency(by names: [String], createdRepo: MBConfig.Repo? = nil) throws -> MBConfig.Repo? {
         do {
-            guard let dp = try getCurrentDependency(by: names) else { return nil }
-            let dps = self.getCurrentDependenciesInSameRepo(by: dp)
-            if dps.count > 0 {
-                UI.log(info: "Found other dependencies \(dps.compactMap({ $0.name ?? "" }).description) in the same repo")
+            let dp0 = try UI.log(verbose: "Search dependencies:") {
+                return try getCurrentDependency(by: names)
+            }
+            guard let dp = dp0 else { return nil }
+            let dps = UI.log(verbose: "Search other dependencies in repository:") {
+                return self.getCurrentDependenciesInSameRepo(by: dp)
+            }
+            return try UI.log(verbose: "Get repo model from dependencies:") {
                 return try self.repoBy(dependency: dp, sameRepoDependencies: dps, createdRepo: createdRepo)
-            } else {
-                return try self.repoBy(dependency: dp)
             }
         } catch let error as RuntimeError {
             UI.log(warn: "\(error)")
@@ -59,7 +61,7 @@ extension MBWorkspace {
         }
         for engine in engines {
             let desc = names.map { "`\($0)`" }.joined(separator: ", ")
-            let dp = UI.log(verbose: "[\(engine.engineName)] Search dependency for \(desc):", resultOutput: { $0?.description ?? "[\(engine.engineName)] Could not find the dependency \(desc)"}) { () -> Dependency? in
+            let dp = UI.log(verbose: "[\(engine.engineName)] Search dependency for \(desc):", resultOutput: { $0?.description ?? "Could not find the dependency \(desc)"}) { () -> Dependency? in
                 do {
                     return try engine.getCurrentDependency(by: names)
                 } catch {
@@ -80,7 +82,7 @@ extension MBWorkspace {
             return result
         }
         for engine in engines {
-            result = UI.log(verbose: "[\(engine.engineName)] Search dependency for \(dependency.name ?? ""):") { () -> [Dependency] in
+            result = UI.log(verbose: "[\(engine.engineName)] Search dependency for \(dependency.name!):", resultOutput: { $0.map(\.description).joined(separator: "\n") }) { () -> [Dependency] in
                 return engine.getCurrentDependenciesInSameRepo(by: dependency)
             }
             if result.count > 0 { return result }
@@ -91,6 +93,7 @@ extension MBWorkspace {
     public func repoBy(dependency: Dependency, sameRepoDependencies: [Dependency] = [], createdRepo: MBConfig.Repo? = nil) throws -> MBConfig.Repo? {
         let name = dependency.name!
         var repo = MBConfig.Repo(name: name, feature: self.config.currentFeature)
+        repo.url = createdRepo?.url
         var commits = [String]()
 
         switch dependency.mode {
@@ -170,46 +173,49 @@ extension MBWorkspace {
         var dependencyRepo: MBConfig.Repo?
         var createTimeByCommitId = Dictionary<String, Date?>()
 
-        UI.log(verbose: "Search dependency \(dependencyName) and other same repo dependencies \(dependenciesInSameRepo.compactMap({ $0.name }).joined(separator: ", ")):")
-        for engine in engines {
-            UI.log(verbose: "[\(engine.engineName)] Query \(dependencyName):")
-            do {
-                if let (repo, createTime) = try engine.searchDependency(name: dependencyName, version: dependency.version) {
-                    UI.log(verbose: "\(repo.name): \(repo.url ?? "") \(repo.baseGitPointer?.description ?? "")")
-                    guard repo.baseGitPointer != nil else {
-                        continue
-                    }
-                    dependencyRepo = repo
-                    if repo.baseGitPointer?.isCommit == true {
-                        createTimeByCommitId.setValue(createTime, forKeyPath: repo.baseGitPointer!.value)
-                        if createTime != nil {
-                            break
+        UI.log(verbose: "Query dependency \(dependency):") {
+            for engine in engines {
+                var stop = false
+                UI.log(verbose: "[\(engine.engineName)] Query \(dependencyName):") {
+                    do {
+                        guard let (repo, createTime) = try engine.searchDependency(name: dependencyName, version: dependency.version, url: createdRepo?.url) else { return }
+                        UI.log(verbose: "\(repo.name): \(repo.url ?? "") \(repo.baseGitPointer?.description ?? "")")
+                        guard repo.baseGitPointer != nil else {
+                            return
                         }
+                        dependencyRepo = repo
+                        guard repo.baseGitPointer?.isCommit == true else { return }
+                        createTimeByCommitId.setValue(createTime, forKeyPath: repo.baseGitPointer!.value)
+                        stop = createTime != nil
+                    } catch {
+                        UI.log(verbose: error.localizedDescription)
                     }
                 }
-            } catch {
-                UI.log(verbose: error.localizedDescription)
+                if stop { break }
             }
         }
 
-        dependenciesInSameRepo.forEach { otherDependency in
-            guard let depName = otherDependency.name else {
-                return
-            }
-            for engine in engines {
-                UI.log(verbose: "[\(engine.engineName)] Query \(depName):")
-                do {
-                    if let (repo, createTime) = try engine.searchDependency(name: depName, version: otherDependency.version) {
-                        UI.log(verbose: "\(repo.name): \(repo.url ?? "") \(repo.baseGitPointer?.description ?? "") \(createTime?.description ?? "")")
-                        if repo.baseGitPointer != nil && repo.baseGitPointer?.isCommit == true {
-                            createTimeByCommitId.setValue(createTime, forKeyPath: repo.baseGitPointer!.value)
-                            if createTime != nil {
-                                break
+        if dependenciesInSameRepo.count > 0 {
+            UI.log(verbose: "Query other dependency \(dependencyName) in the repository:") {
+                dependenciesInSameRepo.forEach { otherDependency in
+                    guard let depName = otherDependency.name else {
+                        return
+                    }
+                    for engine in engines {
+                        var stop = false
+                        UI.log(verbose: "[\(engine.engineName)] Query \(depName):") {
+                            do {
+                                guard let (repo, createTime) = try engine.searchDependency(name: depName, version: otherDependency.version, url: createdRepo?.url) else { return }
+                                UI.log(verbose: "\(repo.name): \(repo.url ?? "") \(repo.baseGitPointer?.description ?? "") \(createTime?.description ?? "")")
+                                guard repo.baseGitPointer != nil && repo.baseGitPointer?.isCommit == true else { return }
+                                createTimeByCommitId.setValue(createTime, forKeyPath: repo.baseGitPointer!.value)
+                                stop = createTime != nil
+                            } catch {
+                                UI.log(verbose: error.localizedDescription)
                             }
                         }
+                        if stop { break }
                     }
-                } catch {
-                    UI.log(verbose: error.localizedDescription)
                 }
             }
         }
@@ -217,7 +223,7 @@ extension MBWorkspace {
         if createdRepo != nil &&
             dependenciesInSameRepo.count > 0 &&
             createTimeByCommitId.count > 0 {
-            try UI.section("Calculate the latest commit from these commits: [\(createTimeByCommitId.keys.joined(separator: ", "))]") {
+            try UI.log(verbose: "Calculate the latest commit from these commits: [\(createTimeByCommitId.keys.joined(separator: ", "))]") {
                 if let latestCommit = try createdRepo!.originRepository?.git?.calculateLatestCommit(commits: Array(createTimeByCommitId.keys)) {
                     UI.log(info: "Find the latest commit sha: \(latestCommit) sorted by linear git history.")
                     dependencyRepo?.baseGitPointer = .commit(latestCommit)
@@ -254,7 +260,7 @@ extension MBWorkspace {
             for engine in engines {
                 let repo: MBConfig.Repo? = UI.log(verbose: "[\(engine.engineName)] Query \(name) \(version ?? ""):") {
                     do {
-                        if let (repo, _) = try engine.searchDependency(name: name, version: version) {
+                        if let (repo, _) = try engine.searchDependency(name: name, version: version, url: nil) {
                             UI.log(verbose: "\(repo.name): \(repo.url ?? "") \(repo.baseGitPointer?.description ?? "")")
                             if repo.baseGitPointer != nil || version == nil {
                                 return repo

@@ -121,10 +121,14 @@ extension MBCommander {
 
         open func showAll() throws {
             let array = self.config.currentFeature.dependencies.array
-            if array.isEmpty {
-                UI.log(info: "No configure custom dependencies.")
+            if UI.apiFormatter == .none {
+                if array.isEmpty {
+                    UI.log(info: "No configure custom dependencies.")
+                } else {
+                    UI.log(info: array.map { $0.description }.joined(separator: "\n"))
+                }
             } else {
-                UI.log(info: array.map { $0.description }.joined(separator: "\n"))
+                UI.log(api: array.toCodableObject() as Any)
             }
         }
 

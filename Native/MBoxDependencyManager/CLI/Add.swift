@@ -165,6 +165,7 @@ extension MBCommander.Add {
 
     @_dynamicReplacement(for: fetchCommitToCheckout(repo:))
     open func dp_fetchCommitToCheckout(repo: MBConfig.Repo) throws {
+        try self.fetchCommitToCheckout(repo: repo)
         if let components = self.components {
             repo.additionalPackageNames.append(contentsOf: components)
         }

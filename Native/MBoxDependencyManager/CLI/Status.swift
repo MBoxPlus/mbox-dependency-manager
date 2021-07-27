@@ -14,7 +14,7 @@ import MBoxWorkspace
 extension MBCommander.Status {
     open class Dependencies: MBCommanderStatus {
         public static var supportedAPI: [MBCommander.Status.APIType] {
-            return [.none]
+            return [.none, .api]
         }
 
         public static var title: String {
@@ -31,6 +31,11 @@ extension MBCommander.Status {
             if self.feature.dependencies.isEmpty { return nil }
             return self.feature.dependencies.array.map { Row(column: $0.description) }
         }
+
+        public func APIData() throws -> Any? {
+            return self.feature.dependencies.toCodableObject()
+        }
+
     }
 
     @_dynamicReplacement(for: allSections)
