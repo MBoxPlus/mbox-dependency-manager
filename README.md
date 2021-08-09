@@ -1,4 +1,4 @@
-# MBox Ruby
+# MBox Dependency Manager
 
 ## Contributing
 Please reference the section [Contributing](https://github.com/MBoxPlus/mbox#contributing)
