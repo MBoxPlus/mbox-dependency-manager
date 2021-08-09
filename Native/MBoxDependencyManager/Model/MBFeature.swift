@@ -47,6 +47,56 @@ extension MBConfig.Feature {
         }
     }
 
+    open func saveDependencies() throws {
+        if !self.dependencies.save() {
+            throw RuntimeError("Save Failed: `\(self.dependencies.filePath ?? "Unknown")`")
+        }
+        if !self.saveChangedDependenciesLock() {
+            throw RuntimeError("Save Failed: `\(self.dependenciesLockPath)`")
+        }
+    }
+
+    private var dependenciesLockPath: String {
+        return self.config.workspace.configDir.appending(pathComponent: "dependencies.lock")
+    }
+
+    @discardableResult
+    open func saveChangedDependenciesLock() -> Bool {
+        let path = self.dependenciesLockPath
+        return self.changedDependencies().save(filePath: path, sortedKeys: true, prettyPrinted: true)
+    }
+
+    open func changedDependencies() -> [String: [String: Any]] {
+        var result = [String: [String: Any]]()
+        for tool in MBDependencyTool.allTools {
+            let dps = self.changedDependencies(for: tool)
+            guard !dps.isEmpty else {
+                continue
+            }
+            result[tool.name] = dps
+        }
+        return result
+    }
+
+    dynamic
+    open func changedDependencies(for tool: MBDependencyTool) -> [String: Any] {
+        let dps = self.config.currentFeature.dependencies.dependencies(for: tool)
+        var info = [String: Any]()
+        for dp in dps {
+            guard let name = dp.name, var dict = dp.toCodableObject() as? [String: Any] else {
+                continue
+            }
+            dict.removeValue(forKey: "name")
+            info[name] = dict
+        }
+        for repo in self.config.currentFeature.repos {
+            for component in repo.activatedComponents(for: tool) {
+                info[component] = ["path": self.config.workspace.relativePath(repo.workingPath)]
+            }
+        }
+        return info
+    }
+
     @_dynamicReplacement(for: exportHash)
     open var dp_exportHash: [String: Any] {
         var hash = self.exportHash

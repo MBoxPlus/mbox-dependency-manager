@@ -16,7 +16,7 @@ open class UserDependency: Dependency {
     public var tools: [MBDependencyTool]?
 
     func isUseTool(_ tool: MBDependencyTool?) -> Bool {
-        guard let tools = self.tools else { return tool == nil }
+        guard let tools = self.tools else { return true }
         if let tool = tool {
             return tools.contains(tool)
         }

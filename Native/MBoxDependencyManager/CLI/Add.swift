@@ -96,6 +96,7 @@ extension MBCommander.Add {
             }
         }
         self.config.save()
+        self.config.currentFeature.saveChangedDependenciesLock()
     }
 
     @_dynamicReplacement(for: searchRepo(by:))

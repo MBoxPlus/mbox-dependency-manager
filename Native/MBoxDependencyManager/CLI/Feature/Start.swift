@@ -49,4 +49,10 @@ extension MBCommander.Feature.Start {
             newFeature.dependencies.save(filePath: newFeature.dependencyFilePath)
         }
     }
+
+    @_dynamicReplacement(for: run())
+    open func dp_run() throws {
+        try self.run()
+        self.config.currentFeature.saveChangedDependenciesLock()
+    }
 }

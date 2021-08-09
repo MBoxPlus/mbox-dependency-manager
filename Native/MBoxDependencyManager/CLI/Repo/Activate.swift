@@ -46,7 +46,14 @@ extension MBCommander {
             return options + super.options
         }
 
+        open override class var flags: [Flag] {
+            var flags = super.flags
+            flags << Flag("all", description: "All Components")
+            return flags
+        }
+
         open var names: [String] = []
+        open var all: Bool = false
         open var tools: [MBDependencyTool] = []
 
         open var components: [Component] = []
@@ -62,23 +69,41 @@ extension MBCommander {
             } else {
                 self.tools = MBDependencyTool.allTools
             }
+            self.all = self.shiftFlag("all")
             try super.setup()
             self.names = self.shiftArguments("name")
         }
 
         open override func validate() throws {
+            if !self.all && self.names.isEmpty  {
+                throw UserError("Require component names, or you can use `--all` to handle all components.")
+            }
             try super.validate()
         }
 
         open override func run() throws {
             try super.run()
-            self.components = try self.fetchComponents(self.names, for: self.tools)
-            try self.handle(components: self.components)
+            if self.all {
+                try self.handle(tools: self.tools)
+            } else {
+                self.components = try self.fetchComponents(self.names, for: self.tools)
+                try self.handle(components: self.components)
+            }
             self.config.save()
+
+            self.config.currentFeature.saveChangedDependenciesLock()
+        }
+
+        open func handle(tools: [MBDependencyTool]) throws {
+            for tool in tools {
+                for repo in self.config.currentFeature.repos {
+                    repo.activeAllComponents(for: tool)
+                }
+            }
         }
 
         open func handle(components: [Component]) throws {
-            for component in self.components {
+            for component in components {
                 if let name = component.name {
                     component.repo.activateComponent(name, for: component.tool)
                 } else {
