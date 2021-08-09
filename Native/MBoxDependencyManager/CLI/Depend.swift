@@ -40,11 +40,15 @@ extension MBCommander {
             flags << Flag("binary", description: "Use binary version")
             flags << Flag("source", description: "Use source version")
             flags << Flag("reset", description: "Reset to default version")
+            flags << Flag("show-all", description: "Show all dependencies")
+            flags << Flag("show-changes", description: "Show changed dependencies by MBox and other tools.")
             return flags
         }
 
         open var useBinary: Bool?
         open var reset: Bool?
+        open var showAll: Bool = false
+        open var showChanges: Bool = false
 
         open var name: String?
 
@@ -60,19 +64,23 @@ extension MBCommander {
 
         dynamic
         open override func setup() throws {
-            self.useBinary = self.shiftFlag("binary")
-            if self.useBinary == nil, let useSource = self.shiftFlag("source") {
-                self.useBinary = !useSource
-            }
-            self.reset = self.shiftFlag("reset")
+            self.showAll = self.shiftFlag("show-all")
+            self.showChanges = self.shiftFlag("show-changes")
+            if !self.showAll && !self.showChanges {
+                self.useBinary = self.shiftFlag("binary")
+                if self.useBinary == nil, let useSource = self.shiftFlag("source") {
+                    self.useBinary = !useSource
+                }
+                self.reset = self.shiftFlag("reset")
 
-            self.version = self.shiftOption("version")
-            self.source = self.shiftOption("source")
-            self.git = self.shiftOption("git")
-            self.commit = self.shiftOption("commit")
-            self.tag = self.shiftOption("tag")
-            self.branch = self.shiftOption("branch")
-            self.path = self.shiftOption("path")
+                self.version = self.shiftOption("version")
+                self.source = self.shiftOption("source")
+                self.git = self.shiftOption("git")
+                self.commit = self.shiftOption("commit")
+                self.tag = self.shiftOption("tag")
+                self.branch = self.shiftOption("branch")
+                self.path = self.shiftOption("path")
+            }
 
             if let name: String = self.shiftOption("tool") {
                 let tool: MBDependencyTool = try MBDependencyTool.tool(for: name)
@@ -84,27 +92,40 @@ extension MBCommander {
         }
 
         open var isEditMode: Bool {
+            if self.showAll || self.showChanges {
+                return false
+            }
             return self.name != nil && (self.useBinary != nil || self.source != nil || self.version != nil || self.git != nil || self.commit != nil || self.tag != nil || self.branch != nil || self.reset != nil)
         }
 
         dynamic
         open override func run() throws {
             try super.run()
-            if self.reset == true {
+            if self.showAll {
+                try self.showAllDependencies()
+            } else if self.showChanges {
+                if let tool = self.tool {
+                    let info = self.config.currentFeature.changedDependencies(for: tool)
+                    UI.log(api: info)
+                } else {
+                    let info = self.config.currentFeature.changedDependencies()
+                    UI.log(api: info)
+                }
+            } else if self.reset == true {
                 if let name = self.name {
                     self.config.currentFeature.dependencies.remove(dependency: name, in: self.tool)
                 } else {
                     self.config.currentFeature.dependencies.removeAll(in: self.tool)
                 }
-                self.config.currentFeature.dependencies.save()
+                try self.config.currentFeature.saveDependencies()
             } else if self.isEditMode {
                 try edit()
-                self.config.currentFeature.dependencies.save()
+                try self.config.currentFeature.saveDependencies()
                 try show()
             } else if self.name != nil {
                 try show()
             } else {
-                try showAll()
+                try showDependChanges()
             }
         }
 
@@ -119,7 +140,7 @@ extension MBCommander {
             dependency.change(version: self.version, source: self.source, git: self.git, branch: self.branch, commit: self.commit, tag: self.tag, path: self.path, binary: self.useBinary)
         }
 
-        open func showAll() throws {
+        open func showDependChanges() throws {
             let array = self.config.currentFeature.dependencies.array
             if UI.apiFormatter == .none {
                 if array.isEmpty {
@@ -138,6 +159,27 @@ extension MBCommander {
                 return
             }
             UI.log(info: dp.description)
+        }
+
+        open func showAllDependencies() throws {
+            if let tool = self.tool {
+                let dps = try self.showAllDependencies(for: tool)
+                UI.log(api: dps as Any)
+                return
+            }
+            var result = [String: [String: Any]]()
+            for tool in MBDependencyTool.allTools {
+                guard let dps = try? self.showAllDependencies(for: tool), !dps.isEmpty else {
+                    continue
+                }
+                result[tool.name] = dps
+            }
+            UI.log(api: result)
+        }
+
+        dynamic
+        open func showAllDependencies(for tool: MBDependencyTool) throws -> [String: Any] {
+            return [:]
         }
     }
 }

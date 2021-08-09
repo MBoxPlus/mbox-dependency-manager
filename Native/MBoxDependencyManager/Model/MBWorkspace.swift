@@ -126,19 +126,26 @@ extension MBWorkspace {
             return try searchRepo(by: dependency, dependenciesInSameRepo: sameRepoDependencies, createdRepo: createdRepo)
         }
 
-        if createdRepo != nil && commits.count > 1 {
-            try UI.section("Calculate the latest commit from these commits: [\(commits.joined(separator: ", "))]") {
-                if let latestCommit = try createdRepo!.originRepository?.git?.calculateLatestCommit(commits: commits) {
-                    UI.log(info: "Find the latest commit sha: \(latestCommit).")
-                    repo.baseGitPointer = .commit(latestCommit)
-                } else {
-                    UI.log(verbose: "These commits are not in linear history.")
-                    if let r = try searchRepo(by: dependency, dependenciesInSameRepo: sameRepoDependencies, createdRepo: createdRepo) {
-                        repo = r
+        if commits.count > 1 {
+            if createdRepo != nil {
+                try UI.section("Calculate the latest commit from these commits: [\(commits.joined(separator: ", "))]") {
+                    if let latestCommit = try createdRepo!.originRepository?.git?.calculateLatestCommit(commits: commits) {
+                        UI.log(info: "Find the latest commit sha: \(latestCommit).")
+                        repo.baseGitPointer = .commit(latestCommit)
                     }
                 }
+                if repo.baseGitPointer != nil {
+                    return repo
+                } else {
+                    UI.log(verbose: "These commits are not in linear history.")
+                }
             }
-
+            if let r = try searchRepo(by: dependency, dependenciesInSameRepo: sameRepoDependencies, createdRepo: createdRepo) {
+                repo = r
+            }
+            if repo.baseGitPointer == nil {
+                repo.baseGitPointer = .commit(commits.first!)
+            }
         }
         return repo
     }

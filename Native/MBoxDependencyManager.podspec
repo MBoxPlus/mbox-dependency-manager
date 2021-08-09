@@ -20,10 +20,13 @@ Pod::Spec.new do |spec|
   spec.source       = { :git => "git@github.com:MBoxSpace/#{name2}.git", :tag => "#{spec.version}" }
   spec.platform     = :osx, '10.15'
 
-  spec.subspec 'Core' do |ss|
+  spec.subspec 'Default' do |ss|
     ss.source_files = "#{name}/*.{h,m,mm,swift,c,cpp}", "#{name}/**/*.{h,m,mm,swift,c,cpp}"
 
-    yaml['DEPENDENCIES'].each do |name|
+    yaml['DEPENDENCIES']&.each do |name|
+      ss.dependency name
+    end
+    yaml['FORWARD_DEPENDENCIES']&.each do |name, _|
       ss.dependency name
     end
 
