@@ -42,6 +42,8 @@ extension MBCommander.Add {
 
     // add component            activate all  |  activate one   |  activate one
     // add repo --component     actiavte all  |  activate one   |  actiavte one
+    //
+    // If the `NAME` is both a repo name and a component name, first be repo.
     open func willActivateAllComponents(_ repo: MBWorkRepo) -> Bool {
         var activateAll: Bool?
         if let activateAllComponents = self.activateAllComponents {
@@ -58,7 +60,7 @@ extension MBCommander.Add {
         }
         if let result = activateAll {
             return result
-        } else if !self.searchedByComponentName() {
+        } else if self.searchedByRepoName() {
             return true
         }
         return false
@@ -77,7 +79,7 @@ extension MBCommander.Add {
                 if self.isFirstAdd == true {
                     repo.deactiveAllComponents(for: unusedTools)
                 }
-            } else if self.searchedByComponentName() {
+            } else if !self.searchedByRepoName() {
                 var components = self.components
                 if components == nil, let name = self.name {
                     components = [name]
@@ -119,8 +121,7 @@ extension MBCommander.Add {
     @_dynamicReplacement(for: flags)
     open class var dp_flags: [Flag] {
         var flags = self.flags
-        flags << Flag("activate-all-components", description: "Activate all component. Default value will be true if add a repo, while default value will be false if add a component. Use `mbox config dependency_manager.activate_all_components_after_add_repo true/false` to change the default behavior.")
-        flags << Flag("disable-all-components", description: "Deprecated. Please use `--activate-all-components` instead.")
+        flags << Flag("activate-all-components", description: "Activate all components. Default value will be true if add a repo, while default value will be false if add a component. Use `mbox config dependency_manager.activate_all_components_after_add_repo true/false` to change the default behavior.")
         return flags
     }
 
@@ -128,10 +129,6 @@ extension MBCommander.Add {
     @_dynamicReplacement(for: setup())
     open func dp_setup() throws {
         self.activateAllComponents = self.shiftFlag("activate-all-components")
-        if self.activateAllComponents == nil,
-           let disableAllComponents = self.shiftFlag("disable-all-components") {
-            self.activateAllComponents = !disableAllComponents
-        }
         self.components = self.shiftOptions("component")
         self.tools = self.shiftOptions("tool")
         try self.setup()
@@ -190,14 +187,15 @@ extension MBCommander.Add {
         }
     }
 
-    open func searchedByComponentName() -> Bool {
-        if self.components?.count ?? 0 > 0 {
+    open func searchedByRepoName() -> Bool {
+        guard let name = self.name else { return false }
+        if let repo = self.addedRepo,
+           repo.name.lowercased() == name.lowercased() {
             return true
         }
-        if let name = self.name,
-           let repo = self.addedRepo?.workRepository,
-           repo.dependencyNames.first(where: { $0.lowercased() == name.lowercased() }) != nil {
-          return true
+        if let repo = self.addedRepo?.workRepository,
+           repo.name.lowercased() == name.lowercased() {
+            return true
         }
         return false
     }

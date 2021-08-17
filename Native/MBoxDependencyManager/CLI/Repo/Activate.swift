@@ -140,9 +140,14 @@ extension MBCommander {
             }
             if let repo = repo {
                 if componentName.isEmpty {
+                    if let workRepo = repo.workRepository,
+                       let (t, d) = workRepo.fetchDependency(repoName, for: tool) {
+                        return Component(name: d, for: t, in: repo)
+                    }
                     return Component(for: tool, in: repo)
                 }
-                if let workRepo = repo.workRepository, let (t, d) = workRepo.fetchDependency(componentName, for: tool) {
+                if let workRepo = repo.workRepository,
+                   let (t, d) = workRepo.fetchDependency(componentName, for: tool) {
                     return Component(name: d, for: t, in: repo)
                 }
                 throw UserError("Could not find component which named `\(componentName)` in repo `\(repo.name)`.")
