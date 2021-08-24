@@ -104,8 +104,9 @@ extension MBCommander.Add {
     @_dynamicReplacement(for: searchRepo(by:))
     open func dp_searchRepo(by name: String) throws -> MBConfig.Repo? {
         var repo = try self.searchRepo(by: name)
-        if repo == nil {
-            repo = try self.workspace.searchRepo(by: [name])
+        if repo == nil,
+           let dependency = try self.workspace.searchDependency(by: [name]) {
+            repo = MBConfig.Repo(feature: self.config.currentFeature, dependency: dependency)
         }
         return repo
     }
@@ -164,15 +165,13 @@ extension MBCommander.Add {
     @_dynamicReplacement(for: fetchCommitToCheckout(repo:))
     open func dp_fetchCommitToCheckout(repo: MBConfig.Repo) throws {
         try self.fetchCommitToCheckout(repo: repo)
-        if let components = self.components {
-            repo.additionalPackageNames.append(contentsOf: components)
-        }
-        if let repo2 = try self.workspace.searchDependency(by: repo.packageNames, createdRepo: repo) {
-            repo.url ?= repo2.url
-            if let path = repo2._path {
+        let components = self.components ?? repo.packageNames
+        if let dependency = try self.workspace.searchDependency(by: components, createdRepo: repo) {
+            repo.url ?= dependency.git
+            if let path = dependency.path {
                 repo.path = path
             }
-            repo.baseGitPointer ?= repo2.baseGitPointer
+            repo.baseGitPointer ?= dependency.gitPointer
         }
     }
 

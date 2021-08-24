@@ -43,11 +43,11 @@ extension MBCommander.Repo.Search {
             repo = try self.search(name: name, owner: owner)
         }
         if repo == nil {
-            if let repo2 = try self.workspace.searchDependency(by: [name]) {
+            if let dependency = try self.workspace.searchDependency(by: [name]) {
                 repo = MBConfig.Repo(feature: self.config.currentFeature)
-                repo?.resolveName(repo2.path.lastPathComponent, path: repo2.path, gitURL: repo2.gitURL)
-                repo?.lastGitPointer ?= repo2.lastGitPointer
-                repo?.baseGitPointer ?= repo2.baseGitPointer
+                repo?.resolveName(dependency.name, path: dependency.path, gitURL: MBGitURL(dependency.git ?? ""))
+                repo?.lastGitPointer ?= dependency.gitPointer
+                repo?.baseGitPointer ?= dependency.gitPointer
             }
         }
         return repo
