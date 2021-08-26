@@ -2,7 +2,7 @@
 //  Add.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2020/4/10.
+//  Created by Whirlwind on 2020/4/10.
 //  Copyright © 2020 com.bytedance. All rights reserved.
 //
 

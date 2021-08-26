@@ -2,7 +2,7 @@
 //  Activate.swift
 //  MBoxWorkspace
 //
-//  Created by 詹迟晶 on 2020/12/2.
+//  Created by Whirlwind on 2020/12/2.
 //  Copyright © 2020 bytedance. All rights reserved.
 //
 
@@ -169,7 +169,7 @@ extension MBCommander {
                     }
                     found = true
                     if component.name == nil {
-                        // 激活所有组件
+                        // Activate all components
                         v.removeAll {
                             $0.repo == component.repo && $0.tool == component.tool
                         }
@@ -179,7 +179,7 @@ extension MBCommander {
                     if v.contains(where: {
                         $0.name == nil && $0.name == component.name && $0.tool == component.tool
                     }) {
-                        // 已经激活所有组件
+                        // All components already be activated
                         continue
                     }
                     if !v.contains(where: { $0 == component }) {

@@ -2,7 +2,7 @@
 //  MBWorkspace.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2020/2/26.
+//  Created by Whirlwind on 2020/2/26.
 //  Copyright © 2020 com.bytedance. All rights reserved.
 //
 
