@@ -17,6 +17,16 @@ extension MBCommander {
             return "Deactivate a or more components"
         }
 
+        open override class var example: String? {
+            return """
+# Deactivate all components in the `repo1`
+$ mbox deactivate repo1
+
+# Deactivate the component named `component1` in the `repo1`
+$ mbox deactivate repo1/component1
+"""
+        }
+
         open override func handle(tools: [MBDependencyTool]) throws {
             for tool in tools {
                 for repo in self.config.currentFeature.repos {

@@ -33,6 +33,16 @@ extension MBCommander {
             return "Activate a or more components"
         }
 
+        open override class var example: String? {
+            return """
+# Activate all components in the `repo1`
+$ mbox activate repo1
+
+# Activate the component named `component1` in the `repo1`
+$ mbox activate repo1/component1
+"""
+        }
+
         open class override var arguments: [Argument] {
             var arguments = super.arguments
             arguments << Argument("name", description: "Repo/Component Name", required: true)

@@ -16,6 +16,17 @@ extension MBCommander {
             return "Show/Change dependencies"
         }
 
+        open override class var example: String? {
+            return """
+# Change a dependency version
+$ mbox depend AFNetworking --version 2.0
+
+# Show all changed dependencies
+$ mbox depend
+AFNetworking: version 2.0
+"""
+        }
+
         open override class var arguments: [Argument] {
             return [Argument("name", description: "The dependency name", required: false)]
         }
