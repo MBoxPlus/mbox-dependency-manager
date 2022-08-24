@@ -7,7 +7,6 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 extension MBCommander {
     open class Depend: MBCommander {
@@ -28,7 +27,7 @@ AFNetworking: version 2.0
         }
 
         open override class var arguments: [Argument] {
-            return [Argument("name", description: "The dependency name", required: false)]
+            return [Argument("name", description: "The dependency name", required: false, plural: true)]
         }
 
         open override class var options: [Option] {
@@ -61,7 +60,7 @@ AFNetworking: version 2.0
         open var showAll: Bool = false
         open var showChanges: Bool = false
 
-        open var name: String?
+        open var names: [String] = []
 
         open var source: String?
         open var version: String?
@@ -98,7 +97,7 @@ AFNetworking: version 2.0
                 self.tool = tool
             }
 
-            self.name = self.shiftArgument("name")
+            self.names = self.shiftArguments("name")
             try super.setup()
         }
 
@@ -106,7 +105,7 @@ AFNetworking: version 2.0
             if self.showAll || self.showChanges {
                 return false
             }
-            return self.name != nil && (self.useBinary != nil || self.source != nil || self.version != nil || self.git != nil || self.commit != nil || self.tag != nil || self.branch != nil || self.reset != nil)
+            return !self.names.isEmpty && (self.useBinary != nil || self.source != nil || self.version != nil || self.git != nil || self.commit != nil || self.tag != nil || self.branch != nil || self.reset != nil)
         }
 
         dynamic
@@ -123,8 +122,10 @@ AFNetworking: version 2.0
                     UI.log(api: info)
                 }
             } else if self.reset == true {
-                if let name = self.name {
-                    self.config.currentFeature.dependencies.remove(dependency: name, in: self.tool)
+                if !self.names.isEmpty {
+                    for name in self.names {
+                        self.config.currentFeature.dependencies.remove(dependency: name, in: self.tool)
+                    }
                 } else {
                     self.config.currentFeature.dependencies.removeAll(in: self.tool)
                 }
@@ -133,7 +134,7 @@ AFNetworking: version 2.0
                 try edit()
                 try self.config.currentFeature.saveDependencies()
                 try show()
-            } else if self.name != nil {
+            } else if !self.names.isEmpty {
                 try show()
             } else {
                 try showDependChanges()
@@ -141,7 +142,12 @@ AFNetworking: version 2.0
         }
 
         open func edit() throws {
-            guard let name = self.name else { return }
+            for name in names {
+                try self.edit(name)
+            }
+        }
+
+        open func edit(_ name: String) throws {
             for repo in self.config.currentFeature.repos {
                 if repo.packageNames.contains(name) {
                     throw RuntimeError("[\(repo)] contains the package `\(name)`, you could not set external dependency when it was added.")
@@ -153,7 +159,7 @@ AFNetworking: version 2.0
 
         open func showDependChanges() throws {
             let array = self.config.currentFeature.dependencies.array
-            if UI.apiFormatter == .none {
+            if MBProcess.shared.apiFormatter == .none {
                 if array.isEmpty {
                     UI.log(info: "No configure custom dependencies.")
                 } else {
@@ -165,8 +171,14 @@ AFNetworking: version 2.0
         }
 
         open func show() throws {
-            guard let dp = try self.config.currentFeature.dependencies.dependency(for: self.name!, in: self.tool) else {
-                UI.log(info: "No configure for dependency `\(self.name!)`.".ANSI(.magenta))
+            for name in names {
+                try self.show(name)
+            }
+        }
+
+        open func show(_ name: String) throws {
+            guard let dp = try self.config.currentFeature.dependencies.dependency(for: name, in: self.tool) else {
+                UI.log(info: "No configure for dependency `\(name)`.".ANSI(.magenta))
                 return
             }
             UI.log(info: dp.description)
@@ -174,13 +186,13 @@ AFNetworking: version 2.0
 
         open func showAllDependencies() throws {
             if let tool = self.tool {
-                let dps = try self.showAllDependencies(for: tool)
+                let dps = try self.showAllDependencies(self.names, for: tool)
                 UI.log(api: dps as Any)
                 return
             }
             var result = [String: [String: Any]]()
             for tool in MBDependencyTool.allTools {
-                guard let dps = try? self.showAllDependencies(for: tool), !dps.isEmpty else {
+                guard let dps = try? self.showAllDependencies(self.names, for: tool), !dps.isEmpty else {
                     continue
                 }
                 result[tool.name] = dps
@@ -189,7 +201,7 @@ AFNetworking: version 2.0
         }
 
         dynamic
-        open func showAllDependencies(for tool: MBDependencyTool) throws -> [String: Any] {
+        open func showAllDependencies(_ names: [String], for tool: MBDependencyTool) throws -> [String: Any] {
             return [:]
         }
     }

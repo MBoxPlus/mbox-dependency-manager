@@ -8,80 +8,77 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
-private var kMBWorkRepoDependencyNamesKey: UInt8 = 0
-private var kMBWorkRepoDependencyNamesByToolKey: UInt8 = 0
+private var kMBWorkRepoComponentsKey: UInt8 = 0
+private var kMBWorkRepoComponentsByToolKey: UInt8 = 0
 
 extension MBWorkRepo {
     @_dynamicReplacement(for: fetchPackageNames())
-    open func dp_fetchPackageNames() -> [String] {
+    public func dp_fetchPackageNames() -> [String] {
         var names = self.fetchPackageNames()
-        names.append(contentsOf: self.dependencyNames)
+        names.append(contentsOf: self.components.map(\.name))
         return names
     }
 
-    open var dependencyNames: [String] {
+    public var components: [Component] {
         set {
-            associateObject(base: self, key: &kMBWorkRepoDependencyNamesKey, value: newValue)
+            associateObject(base: self, key: &kMBWorkRepoComponentsKey, value: newValue)
         }
         get {
-            return associatedObject(base: self, key: &kMBWorkRepoDependencyNamesKey) {
-                return self.dependencyNamesByTool.values.flatMap { $0 }.withoutDuplicates()
+            return associatedObject(base: self, key: &kMBWorkRepoComponentsKey) {
+                return self.componentsByTool.values.flatMap { $0 }.withoutDuplicates()
             }
         }
     }
 
-    open var dependencyNamesByTool: [MBDependencyTool: [String]] {
+    public var componentsByTool: [MBDependencyTool: [Component]] {
         set {
-            associateObject(base: self, key: &kMBWorkRepoDependencyNamesByToolKey, value: newValue)
+            associateObject(base: self, key: &kMBWorkRepoComponentsByToolKey, value: newValue)
         }
         get {
-            return associatedObject(base: self, key: &kMBWorkRepoDependencyNamesByToolKey) {
-                var v = [MBDependencyTool: [String]]()
-                for (tool, name) in self.resolveDependencyNames() {
-                    var items = v[tool] ?? []
-                    if !items.contains(name) {
-                        items.append(name)
-                    }
-                    v[tool] = items
+            return associatedObject(base: self, key: &kMBWorkRepoComponentsByToolKey) {
+                var v = [MBDependencyTool: [Component]]()
+                for component in self.resolveComponents() {
+                    component.repo = self
+                    var items = v[component.tool] ?? []
+                    items.append(component)
+                    v[component.tool] = items
                 }
                 return v
             }
         }
     }
 
-    open func fetchDependencyNames(for tool: MBDependencyTool) -> (tool: MBDependencyTool, dependencies: [String])? {
-        for (key, values) in dependencyNamesByTool {
-            if tool == key {
-                return (tool: tool, dependencies: values)
-            }
-        }
-        return nil
+    public func fetchComponents(for tool: MBDependencyTool) -> [Component] {
+        return componentsByTool[tool] ?? []
     }
 
     dynamic
-    open func fetchDependency(_ name: String, for tool: MBDependencyTool) -> (tool: MBDependencyTool, dependency: String)? {
-        guard let (t, dps) = self.fetchDependencyNames(for: tool) else { return nil }
-        let name = dps.first { $0.lowercased() == name.lowercased() }
-        if let name = name {
-            return (tool: t, dependency: name)
-        }
-        return nil
+    public func fetchComponent(_ name: String, for tool: MBDependencyTool) -> Component? {
+        let components = self.fetchComponents(for: tool)
+        if components.isEmpty { return nil }
+        return components.first { $0.isName(name) }
     }
 
     dynamic
-    open func fetchDependencies(_ names: [String], for tool: MBDependencyTool) -> (tool: MBDependencyTool, dependencies: [String])? {
-        guard let (t, dps) = self.fetchDependencyNames(for: tool) else { return nil }
+    public func fetchComponents(_ names: [String], for tool: MBDependencyTool) -> [Component] {
+        let components = self.fetchComponents(for: tool)
         let names = names.map { $0.lowercased() }
-        let values = dps.filter {
-            names.contains($0.lowercased())
+        return components.filter { c in
+            return names.contains { c.isName($0) }
         }
-        return (tool: t, dependencies: values)
+    }
+
+    public func fetchComponents(_ name: String) -> [Component] {
+        return self.components.filter { $0.isName(name) }
+    }
+
+    public func activatedComponents(for tool: MBDependencyTool) -> [Component] {
+        return self.fetchComponents(for: tool).filter { self.model.isActive($0) }
     }
 
     dynamic
-    open func resolveDependencyNames() -> [(tool: MBDependencyTool, name: String)] {
+    public func resolveComponents() -> [Component] {
         return []
     }
 }

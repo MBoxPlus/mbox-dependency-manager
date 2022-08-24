@@ -8,19 +8,18 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 var MBConfigFeatureDependenciesKey: UInt8 = 0
 extension MBConfig.Feature {
     @_dynamicReplacement(for: supportFiles)
-    open var dp_supportFiles: [String] {
+    public var dp_supportFiles: [String] {
         var files = supportFiles
         files.append(UserDependencyFile.fileName)
         return files
     }
 
-    @_dynamicReplacement(for: prepare)
-    open func dp_prepare(dictionary: [String: Any]) -> [String: Any] {
+    @_dynamicReplacement(for: prepare(dictionary:))
+    public func dp_prepare(dictionary: [String: Any]) -> [String: Any] {
         var dictionary = dictionary
         if let data = dictionary.removeValue(forKey: "dependencies"),
             let dps = try? UserDependencyFile.load(fromObject: data) {
@@ -29,14 +28,17 @@ extension MBConfig.Feature {
         return self.prepare(dictionary: dictionary)
     }
 
-    open var dependencyFilePath: String {
+    public var dependencyFilePath: String {
         return Workspace.rootPath.appending(pathComponent: UserDependencyFile.fileName)
     }
 
-    open var dependencies: UserDependencyFile {
+    public var dependencies: UserDependencyFile {
         get {
             return associatedObject(base: self, key: &MBConfigFeatureDependenciesKey) {
-                if let dp = UserDependencyFile.load(fromFile: self.dependencyFilePath) { return dp }
+                if self.isCurrent,
+                   let dp = UserDependencyFile.load(fromFile: self.dependencyFilePath) {
+                    return dp
+                }
                 var dp = UserDependencyFile()
                 dp.filePath = self.dependencyFilePath
                 return dp
@@ -47,7 +49,7 @@ extension MBConfig.Feature {
         }
     }
 
-    open func saveDependencies() throws {
+    public func saveDependencies() throws {
         if !self.dependencies.save() {
             throw RuntimeError("Save Failed: `\(self.dependencies.filePath ?? "Unknown")`")
         }
@@ -61,12 +63,12 @@ extension MBConfig.Feature {
     }
 
     @discardableResult
-    open func saveChangedDependenciesLock() -> Bool {
+    public func saveChangedDependenciesLock() -> Bool {
         let path = self.dependenciesLockPath
         return self.changedDependencies().save(filePath: path, sortedKeys: true, prettyPrinted: true)
     }
 
-    open func changedDependencies() -> [String: [String: Any]] {
+    public func changedDependencies() -> [String: [String: Any]] {
         var result = [String: [String: Any]]()
         for tool in MBDependencyTool.allTools {
             let dps = self.changedDependencies(for: tool)
@@ -79,7 +81,7 @@ extension MBConfig.Feature {
     }
 
     dynamic
-    open func changedDependencies(for tool: MBDependencyTool) -> [String: Any] {
+    public func changedDependencies(for tool: MBDependencyTool) -> [String: Any] {
         let dps = self.config.currentFeature.dependencies.dependencies(for: tool)
         var info = [String: Any]()
         for dp in dps {
@@ -98,10 +100,11 @@ extension MBConfig.Feature {
     }
 
     @_dynamicReplacement(for: exportHash)
-    open var dp_exportHash: [String: Any] {
+    public var dp_exportHash: [String: Any]? {
         var hash = self.exportHash
         if !self.dependencies.isEmpty {
-            hash["dependencies"] = self.dependencies
+            hash ?= [:]
+            hash?["dependencies"] = self.dependencies
         }
         return hash
     }

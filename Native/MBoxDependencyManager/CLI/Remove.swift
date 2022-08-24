@@ -11,7 +11,7 @@ import MBoxWorkspace
 
 extension MBCommander.Remove {
     @_dynamicReplacement(for: run())
-    open func dp_run() throws {
+    public func dp_run() throws {
         try self.run()
         self.config.currentFeature.saveChangedDependenciesLock()
     }

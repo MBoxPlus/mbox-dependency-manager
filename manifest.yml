@@ -4,7 +4,8 @@ VERSION: '1.4'
 DEPENDENCIES:
 - MBoxCore
 - MBoxGit
-- MBoxWorkspace
+FORWARD_DEPENDENCIES:
+  MBoxWorkspace: 
 CLI: true
 USER_VISIBLE: false
 MINIMUM_VERSION: 4.8.0

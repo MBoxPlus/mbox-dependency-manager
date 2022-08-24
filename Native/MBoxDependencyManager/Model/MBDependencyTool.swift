@@ -10,7 +10,11 @@ import Foundation
 import MBoxCore
 
 
-public class MBDependencyTool {
+public class MBDependencyTool: Decodable {
+    required public init(from decoder: Decoder) throws {
+        self.name = try decoder.singleValueContainer().decode(String.self)
+    }
+
     required public init() {
     }
 
@@ -76,5 +80,12 @@ extension MBDependencyTool: CodableType {
 extension MBDependencyTool: MBCodable {
     public func toCodableObject() -> Any? {
         return self.name
+    }
+}
+
+extension MBDependencyTool: Encodable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.name)
     }
 }

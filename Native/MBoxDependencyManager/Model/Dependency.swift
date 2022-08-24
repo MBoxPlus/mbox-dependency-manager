@@ -9,7 +9,6 @@
 import Foundation
 import MBoxCore
 import MBoxGit
-import MBoxWorkspaceCore
 
 open class Dependency: MBCodableObject {
     public enum Mode {
@@ -35,6 +34,11 @@ open class Dependency: MBCodableObject {
 
     @Codable
     public var git: String?
+
+    public lazy var gitURL: MBGitURL? = {
+        guard let git = self.git else { return nil }
+        return MBGitURL(git)
+    }()
 
     @Codable
     public var branch: String?
@@ -64,7 +68,15 @@ open class Dependency: MBCodableObject {
     public var homepage: String?
 
     public var mode: Mode {
-        if self.git != nil || self.commit != nil || self.branch != nil || self.tag != nil { return .remote }
+        if self.gitPointer != nil {
+            return .remote
+        }
+        if self.git != nil {
+            if self.version != nil {
+                return .version
+            }
+            return .remote
+        }
         if self.version != nil || self.source != nil { return .version }
         if self.path != nil { return .local }
         if self.binary != nil { return .binarySwitch }
@@ -212,16 +224,31 @@ open class Dependency: MBCodableObject {
         guard let other = other else { return }
         self.dictionary.merge(other.dictionary) { (_, new) in new }
     }
+
+    open var root: Dependency {
+        guard self.name!.contains("/") else {
+            return self
+        }
+        let rootDp = self.copy() as! Dependency
+        rootDp.name = self.rootName
+        return rootDp
+    }
 }
 
 extension MBConfig.Repo {
     public convenience init(feature: MBConfig.Feature, dependency: Dependency) {
         self.init(feature: feature)
-        self.name = dependency.name!
         self.baseGitPointer = dependency.gitPointer
         self.url = dependency.git
         if let path = dependency.path {
             self.path = path
+        }
+        if let url = self.url, let git = MBGitURL(url) {
+            self.resolveName(gitURL: git)
+        } else if let path = dependency.path {
+            self.resolveName(path: path)
+        } else {
+            self.name = dependency.name!
         }
     }
 }

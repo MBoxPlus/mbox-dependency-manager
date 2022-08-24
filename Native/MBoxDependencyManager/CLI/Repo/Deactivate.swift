@@ -8,7 +8,6 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 extension MBCommander {
     open class Deactivate: Activate {
@@ -17,36 +16,12 @@ extension MBCommander {
             return "Deactivate a or more components"
         }
 
-        open override class var example: String? {
-            return """
-# Deactivate all components in the `repo1`
-$ mbox deactivate repo1
-
-# Deactivate the component named `component1` in the `repo1`
-$ mbox deactivate repo1/component1
-"""
+        open override func handle(repo: MBConfig.Repo, tool: MBDependencyTool) throws {
+            repo.deactiveAllComponents(for: tool)
         }
 
-        open override func handle(tools: [MBDependencyTool]) throws {
-            for tool in tools {
-                for repo in self.config.currentFeature.repos {
-                    repo.deactiveAllComponents(for: tool)
-                }
-            }
-        }
-
-        open override func handle(components: [Component]) throws {
-            for component in components {
-                if let name = component.name {
-                    UI.log(info: "[\(component.repo)] Deactivate component `\(name)` for \(component.tool)") {
-                        component.repo.deactivateComponent(name, for: component.tool)
-                    }
-                } else {
-                    UI.log(info: "[\(component.repo)] Deactivate all components for \(component.tool)") {
-                        component.repo.deactiveAllComponents(for: component.tool)
-                    }
-                }
-            }
+        open override func handle(component: MBWorkRepo.Component) throws {
+            component.repo?.model.deactivateComponent(component)
         }
     }
 }

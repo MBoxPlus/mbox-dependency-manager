@@ -3,11 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 55;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		AB07130025E8C58F007294A5 /* MBSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0712FF25E8C58F007294A5 /* MBSetting.swift */; };
+		AB14ECB2287323B800BAC8FF /* MBWorkRepo.Component.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB14ECB1287323B800BAC8FF /* MBWorkRepo.Component.swift */; };
 		AB2D48EE23C60C9700596FEF /* MBFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2D48ED23C60C9700596FEF /* MBFeature.swift */; };
 		AB2D48F023C6C88300596FEF /* Status.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2D48EF23C6C88300596FEF /* Status.swift */; };
 		AB37166D2440BA6D00548337 /* Add.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB37166C2440BA6D00548337 /* Add.swift */; };
@@ -19,7 +20,7 @@
 		AB5AF8CC23CD9FB500C68E70 /* Start.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5AF8CB23CD9FB500C68E70 /* Start.swift */; };
 		AB645E4126C124D6009C1587 /* Remove.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB645E4026C124D6009C1587 /* Remove.swift */; };
 		AB6AC3222577D4E2007849A7 /* Activate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6AC3212577D4E2007849A7 /* Activate.swift */; };
-		AB6AC3282577D67F007849A7 /* MBConfig.Rep+Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6AC3272577D67F007849A7 /* MBConfig.Rep+Components.swift */; };
+		AB6AC3282577D67F007849A7 /* MBConfig.Repo+Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6AC3272577D67F007849A7 /* MBConfig.Repo+Components.swift */; };
 		AB6AC32C25791872007849A7 /* Deactivate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6AC32B25791872007849A7 /* Deactivate.swift */; };
 		AB6D75F2230467FC003A0EA1 /* MBoxDependencyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = AB6D75F0230467FC003A0EA1 /* MBoxDependencyManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AB6D75FE23046AAE003A0EA1 /* MBoxDependencyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6D75FD23046AAE003A0EA1 /* MBoxDependencyManager.swift */; };
@@ -34,6 +35,7 @@
 		18843D0FB04FBA5A7E1D7BB2 /* Pods-MBoxDependencyManager.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MBoxDependencyManager.release.xcconfig"; path = "Target Support Files/Pods-MBoxDependencyManager/Pods-MBoxDependencyManager.release.xcconfig"; sourceTree = "<group>"; };
 		203423B5B643B881CA999318 /* Pods_MBoxDependencyManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MBoxDependencyManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB0712FF25E8C58F007294A5 /* MBSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBSetting.swift; sourceTree = "<group>"; };
+		AB14ECB1287323B800BAC8FF /* MBWorkRepo.Component.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBWorkRepo.Component.swift; sourceTree = "<group>"; };
 		AB2D48ED23C60C9700596FEF /* MBFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBFeature.swift; sourceTree = "<group>"; };
 		AB2D48EF23C6C88300596FEF /* Status.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Status.swift; sourceTree = "<group>"; };
 		AB37166C2440BA6D00548337 /* Add.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Add.swift; sourceTree = "<group>"; };
@@ -47,7 +49,7 @@
 		AB5AF8CB23CD9FB500C68E70 /* Start.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Start.swift; sourceTree = "<group>"; };
 		AB645E4026C124D6009C1587 /* Remove.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Remove.swift; sourceTree = "<group>"; };
 		AB6AC3212577D4E2007849A7 /* Activate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Activate.swift; sourceTree = "<group>"; };
-		AB6AC3272577D67F007849A7 /* MBConfig.Rep+Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MBConfig.Rep+Components.swift"; sourceTree = "<group>"; };
+		AB6AC3272577D67F007849A7 /* MBConfig.Repo+Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MBConfig.Repo+Components.swift"; sourceTree = "<group>"; };
 		AB6AC32B25791872007849A7 /* Deactivate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deactivate.swift; sourceTree = "<group>"; };
 		AB6D75ED230467FB003A0EA1 /* MBoxDependencyManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MBoxDependencyManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB6D75F0230467FC003A0EA1 /* MBoxDependencyManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MBoxDependencyManager.h; sourceTree = "<group>"; };
@@ -111,8 +113,9 @@
 				AB5AF8C823CC7F6300C68E70 /* UserDependencyFile.swift */,
 				AB2D48ED23C60C9700596FEF /* MBFeature.swift */,
 				ABF67E13240676540098F680 /* MBWorkspace.swift */,
-				AB6AC3272577D67F007849A7 /* MBConfig.Rep+Components.swift */,
+				AB6AC3272577D67F007849A7 /* MBConfig.Repo+Components.swift */,
 				ABDA214525BF00B40012029A /* MBWorkRepo+Dependency.swift */,
+				AB14ECB1287323B800BAC8FF /* MBWorkRepo.Component.swift */,
 				AB0712FF25E8C58F007294A5 /* MBSetting.swift */,
 				ABDA213F25BEFA240012029A /* MBDependencyTool.swift */,
 			);
@@ -213,7 +216,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 1130;
-				LastUpgradeCheck = 1300;
+				LastUpgradeCheck = 1400;
 				ORGANIZATIONNAME = com.bytedance;
 				TargetAttributes = {
 					AB6D75EC230467FB003A0EA1 = {
@@ -223,7 +226,7 @@
 				};
 			};
 			buildConfigurationList = AB6D75E7230467FB003A0EA1 /* Build configuration list for PBXProject "MBoxDependencyManager" */;
-			compatibilityVersion = "Xcode 12.0";
+			compatibilityVersion = "Xcode 13.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -282,6 +285,7 @@
 			files = (
 				ABF67E102403E1370098F680 /* Import.swift in Sources */,
 				AB37166D2440BA6D00548337 /* Add.swift in Sources */,
+				AB14ECB2287323B800BAC8FF /* MBWorkRepo.Component.swift in Sources */,
 				AB3FE11223C46BC9002F902B /* Dependency.swift in Sources */,
 				AB6D75FE23046AAE003A0EA1 /* MBoxDependencyManager.swift in Sources */,
 				AB645E4126C124D6009C1587 /* Remove.swift in Sources */,
@@ -290,7 +294,7 @@
 				AB5AF8CC23CD9FB500C68E70 /* Start.swift in Sources */,
 				AB07130025E8C58F007294A5 /* MBSetting.swift in Sources */,
 				AB2D48EE23C60C9700596FEF /* MBFeature.swift in Sources */,
-				AB6AC3282577D67F007849A7 /* MBConfig.Rep+Components.swift in Sources */,
+				AB6AC3282577D67F007849A7 /* MBConfig.Repo+Components.swift in Sources */,
 				AB49667C2341FF7B00AF8A47 /* Depend.swift in Sources */,
 				AB3716802445C93700548337 /* Search.swift in Sources */,
 				ABF67E14240676540098F680 /* MBWorkspace.swift in Sources */,
@@ -342,6 +346,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DYLIB_CURRENT_VERSION = "$(MARKETING_VERSION)";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -409,6 +414,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DYLIB_CURRENT_VERSION = "$(MARKETING_VERSION)";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -441,6 +447,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -471,6 +478,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;

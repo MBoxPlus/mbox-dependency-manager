@@ -8,7 +8,6 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 open class UserDependencyFile: MBCodableArray<UserDependency>, MBYAMLProtocol {
     public static let fileName = "MBox.dependencies.yml"

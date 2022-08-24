@@ -8,11 +8,10 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 extension MBCommander.Feature.Import {
     @_dynamicReplacement(for: switchFeature(args:))
-    open func dp_switchFeature(args: [String]) throws {
+    public func dp_switchFeature(args: [String]) throws {
         var args = args
         if !self.feature.dependencies.isEmpty {
             args << "--dependencies"
@@ -22,7 +21,9 @@ extension MBCommander.Feature.Import {
                     dps[dp.name!] = v
                 }
             }
-            try args << dps.toString(coder: .json)
+            try args << dps.toString(coder: .json, prettyPrinted: false)
+        } else if self.feature.isNew == true {
+            args << "--dependencies={}"
         }
         try self.switchFeature(args: args)
     }

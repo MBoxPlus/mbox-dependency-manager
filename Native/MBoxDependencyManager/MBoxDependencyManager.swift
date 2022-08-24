@@ -4,11 +4,10 @@
 //
 
 import Foundation
-import MBoxCore
-import MBoxWorkspaceCore
+@_exported import MBoxWorkspace
 
 @objc(MBoxDependencyManager)
-open class MBoxDependencyManager: NSObject, MBWorkspacePluginProtocol {
+open class MBoxDependencyManager: NSObject, MBPluginProtocol, MBWorkspacePluginProtocol {
 
     public func registerCommanders() {
         MBCommanderGroup.shared.addCommand(MBCommander.Depend.self)

@@ -8,19 +8,18 @@
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 var MBCommanderFeatureStartDependenciesKey: UInt8 = 0
 extension MBCommander.Feature.Start {
     @_dynamicReplacement(for: options)
-    open class var dp_options: [Option] {
+    public class var dp_options: [Option] {
         var options = self.options
         options << Option("dependencies", description: "Create a new feature with a custom dependency list. It is a JSON String, eg: {\"Aweme\": {\"version\": \"1.0\"}}")
         return options
     }
 
     @_dynamicReplacement(for: setup())
-    open func dp_setup() throws {
+    public func dp_setup() throws {
         if let json: String = self.shiftOption("dependencies") {
             let hash = try [String: [String: Any]].load(fromString: json, coder: .json)
             self.dependencies = hash.map { map -> UserDependency in
@@ -32,7 +31,7 @@ extension MBCommander.Feature.Start {
         try self.setup()
     }
 
-    open var dependencies: [UserDependency]? {
+    public var dependencies: [UserDependency]? {
         set {
             associateObject(base: self, key: &MBCommanderFeatureStartDependenciesKey, value: newValue)
         }
@@ -42,16 +41,24 @@ extension MBCommander.Feature.Start {
     }
 
     @_dynamicReplacement(for: applyFeature(_:oldFeature:isCreate:))
-    open func dp_applyFeature(_ newFeature: MBConfig.Feature, oldFeature: MBConfig.Feature, isCreate: Bool) throws {
+    public func dp_applyFeature(_ newFeature: MBConfig.Feature, oldFeature: MBConfig.Feature, isCreate: Bool) throws {
         try self.applyFeature(newFeature, oldFeature: oldFeature, isCreate: isCreate)
-        if let dps = self.dependencies {
+        guard let dps = self.dependencies else {
+            return
+        }
+        UI.section("Replace dependencies:") {
+            if dps.isEmpty {
+                UI.log(info: "No any dependencies.")
+            } else {
+                UI.log(info: dps.map { "- \($0.description)" }.joined(separator: "\n"))
+            }
             newFeature.dependencies.array = dps
             newFeature.dependencies.save(filePath: newFeature.dependencyFilePath)
         }
     }
 
     @_dynamicReplacement(for: run())
-    open func dp_run() throws {
+    public func dp_run() throws {
         try self.run()
         self.config.currentFeature.saveChangedDependenciesLock()
     }
