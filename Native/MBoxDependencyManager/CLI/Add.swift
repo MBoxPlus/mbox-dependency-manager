@@ -180,7 +180,7 @@ extension MBCommander.Add {
     @_dynamicReplacement(for: fetchCommitToCheckout(repo:))
     public func dp_fetchCommitToCheckout(repo: MBConfig.Repo) throws {
         try self.fetchCommitToCheckout(repo: repo)
-        let components = self.components ?? repo.packageNames
+        let components = self.components ?? []
         if let dependency = try self.workspace.searchDependency(by: components, createdRepo: repo) {
             repo.url ?= dependency.git
             if let path = dependency.path {

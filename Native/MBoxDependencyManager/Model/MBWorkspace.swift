@@ -9,25 +9,30 @@
 import Foundation
 import MBoxCore
 
-public protocol MBDependencySearchEngine {
+public protocol MBDependencySearchEngine: AnyObject {
     var engineName: String { get }
     var enginePriority: Int { get }
+    var url: MBGitURL? { set get }
+    func allDependencies() throws -> [Dependency]
     func searchDependencies(by names: [String]) throws -> [Dependency]
-    func resolveDependency(name: String, version: String?, url: String?) throws -> Dependency?
-    func getReleaseDate(name: String, version: String?, url: String?) throws -> Date?
+    func resolveDependency(name: String, version: String?) throws -> Dependency?
+    func getReleaseDate(name: String, version: String?) throws -> Date?
 }
 
 extension MBDependencySearchEngine {
-    public func getReleaseDate(name: String, version: String?, url: String?) throws -> Date? {
+    public func getReleaseDate(name: String, version: String?) throws -> Date? {
         return nil
+    }
+    public func allDependencies() throws -> [Dependency] {
+        return []
     }
 }
 
 var MBSearchEnginesFlag: UInt8 = 0
 extension MBWorkspace {
-    public func searchCurrentDependencies(by names: [String]) throws -> [Dependency] {
+    public func searchCurrentDependencies(by names: [String], with url: MBGitURL? = nil) throws -> [Dependency] {
         let title = names.map { "`\($0)`" }.joined(separator: ", ")
-        return try self.lookupEngines(title) { engine in
+        return try self.lookupEngines(url: url, title: title) { engine in
             let dps = try engine.searchDependencies(by: names)
             if !dps.isEmpty {
                 UI.log(verbose: "Find dependencies:", items: dps.map { $0.description })
@@ -39,23 +44,51 @@ extension MBWorkspace {
         } ?? []
     }
 
-    private func searchAllDependencies(by names: [String]) throws -> [Dependency] {
+    private func searchAllDependencies(by names: [String], with url: MBGitURL? = nil) throws -> [Dependency] {
         let title = names.map { "`\($0)`" }.joined(separator: ", ")
-        return try self.lookupEngines(title, { $0?.description ?? "Could not find the dependency \(title)"}) { engine in
-            return try names.compactMap {
-                try engine.resolveDependency(name: $0, version: nil, url: nil)
+        return try self.lookupEngines(url: url, title: title) { engine in
+            let dps = try names.compactMap {
+                try engine.resolveDependency(name: $0, version: nil)
+            }
+            if dps.isEmpty {
+                UI.log(verbose: "Could not find the dependency \(title)")
+                return nil
+            } else {
+                UI.log(verbose: "Found Dependencies:", items: dps.map(\.description))
+                return dps
             }
         } ?? []
     }
 
-    public func searchDependency(by names: [String], createdRepo: MBConfig.Repo? = nil) throws -> Dependency? {
-        do {
-            var dps = try UI.log(verbose: "Search current dependencies:") {
-                return try searchCurrentDependencies(by: names)
-            }
+    private func searchAllDependencies(url: MBGitURL) throws -> [Dependency] {
+        return try self.lookupEngines(url: url, title: "Fetch All Packages in \(url)") { engine in
+            let dps = try engine.allDependencies()
             if dps.isEmpty {
+                UI.log(verbose: "Could not find the any pakcages.")
+                return nil
+            } else {
+                UI.log(verbose: "Found Packages:", items: dps.map(\.description))
+                return dps
+            }
+        } ?? []
+        
+    }
+
+    public func searchDependency(by names: [String], url: MBGitURL? = nil, createdRepo: MBConfig.Repo? = nil) throws -> Dependency? {
+        do {
+            var dps: [Dependency]
+            if names.isEmpty, let url = url ?? createdRepo?.gitURL {
                 dps = try UI.log(verbose: "Search all dependencies:") {
-                    return try searchAllDependencies(by: names)
+                    return try searchAllDependencies(url: url)
+                }
+            } else {
+                dps = try UI.log(verbose: "Search current dependencies:") {
+                    return try searchCurrentDependencies(by: names, with: url ?? createdRepo?.gitURL)
+                }
+                if dps.isEmpty {
+                    dps = try UI.log(verbose: "Search all dependencies:") {
+                        return try searchAllDependencies(by: names, with: url ?? createdRepo?.gitURL)
+                    }
                 }
             }
             return try UI.log(verbose: "Resolve dependencies:") {
@@ -135,7 +168,8 @@ extension MBWorkspace {
         return []
     }
 
-    private func lookupEngines<T>(_ title: String,
+    private func lookupEngines<T>(url: MBGitURL?,
+                                  title: String,
                                   _ resultOutput: ((T?) -> String?)? = nil,
                                   block: (MBDependencySearchEngine) throws -> T?) throws -> T? {
         let engines = self.searchEngines
@@ -149,6 +183,7 @@ extension MBWorkspace {
             result = { _ in return nil }
         }
         for engine in engines {
+            engine.url = url
             let value: T? = UI.log(verbose: "[\(engine.engineName)] \(title):",
                                    resultOutput: result) {
                 do {
@@ -200,8 +235,8 @@ extension MBWorkspace {
         var lastDependency: Dependency?
         let url = createdRepo?.url ?? dependency.git
 
-        let result = try self.lookupEngines("Query dependency \(name)") { engine -> Dependency? in
-            guard let dep = try engine.resolveDependency(name: name, version: version, url: url),
+        let result = try self.lookupEngines(url: createdRepo?.gitURL, title: "Query dependency \(name)") { engine -> Dependency? in
+            guard let dep = try engine.resolveDependency(name: name, version: version),
                   dep.gitPointer != nil else {
                 return nil
             }

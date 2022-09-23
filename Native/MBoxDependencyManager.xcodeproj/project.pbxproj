@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2BE6483A28D0B1F7008DEEDB /* DependencyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE6483928D0B1F7008DEEDB /* DependencyManager.swift */; };
 		AB07130025E8C58F007294A5 /* MBSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0712FF25E8C58F007294A5 /* MBSetting.swift */; };
 		AB14ECB2287323B800BAC8FF /* MBWorkRepo.Component.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB14ECB1287323B800BAC8FF /* MBWorkRepo.Component.swift */; };
 		AB2D48EE23C60C9700596FEF /* MBFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2D48ED23C60C9700596FEF /* MBFeature.swift */; };
@@ -34,6 +35,7 @@
 /* Begin PBXFileReference section */
 		18843D0FB04FBA5A7E1D7BB2 /* Pods-MBoxDependencyManager.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MBoxDependencyManager.release.xcconfig"; path = "Target Support Files/Pods-MBoxDependencyManager/Pods-MBoxDependencyManager.release.xcconfig"; sourceTree = "<group>"; };
 		203423B5B643B881CA999318 /* Pods_MBoxDependencyManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MBoxDependencyManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BE6483928D0B1F7008DEEDB /* DependencyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyManager.swift; sourceTree = "<group>"; };
 		AB0712FF25E8C58F007294A5 /* MBSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBSetting.swift; sourceTree = "<group>"; };
 		AB14ECB1287323B800BAC8FF /* MBWorkRepo.Component.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBWorkRepo.Component.swift; sourceTree = "<group>"; };
 		AB2D48ED23C60C9700596FEF /* MBFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBFeature.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				AB2D48EF23C6C88300596FEF /* Status.swift */,
 				AB37166C2440BA6D00548337 /* Add.swift */,
 				AB645E4026C124D6009C1587 /* Remove.swift */,
+				2BE6483928D0B1F7008DEEDB /* DependencyManager.swift */,
 			);
 			path = CLI;
 			sourceTree = "<group>";
@@ -296,6 +299,7 @@
 				AB2D48EE23C60C9700596FEF /* MBFeature.swift in Sources */,
 				AB6AC3282577D67F007849A7 /* MBConfig.Repo+Components.swift in Sources */,
 				AB49667C2341FF7B00AF8A47 /* Depend.swift in Sources */,
+				2BE6483A28D0B1F7008DEEDB /* DependencyManager.swift in Sources */,
 				AB3716802445C93700548337 /* Search.swift in Sources */,
 				ABF67E14240676540098F680 /* MBWorkspace.swift in Sources */,
 				AB6AC3222577D4E2007849A7 /* Activate.swift in Sources */,
