@@ -4,3 +4,4 @@ node_modules/
 yarn.lock
 Native/Pods
 Native/Basic.xcconfig
+Electron/yarn-error.log

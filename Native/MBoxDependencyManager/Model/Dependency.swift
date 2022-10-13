@@ -21,6 +21,10 @@ open class Dependency: MBCodableObject {
 
     @Codable
     public var name: String?
+    public var rootName: String? {
+        guard let value = name?.split(separator: "/").first else { return nil }
+        return String(value)
+    }
 
     @Codable
     public var version: String?
@@ -30,6 +34,11 @@ open class Dependency: MBCodableObject {
 
     @Codable
     public var git: String?
+
+    public lazy var gitURL: MBGitURL? = {
+        guard let git = self.git else { return nil }
+        return MBGitURL(git)
+    }()
 
     @Codable
     public var branch: String?
@@ -52,10 +61,24 @@ open class Dependency: MBCodableObject {
     @Codable
     public var type: String?
 
+    @Codable
+    public var date: Date?
+
+    @Codable
+    public var homepage: String?
+
     public var mode: Mode {
-        if self.git != nil || self.commit != nil || self.branch != nil || self.tag != nil { return .remote }
-        if self.path != nil { return .local }
+        if self.gitPointer != nil {
+            return .remote
+        }
+        if self.git != nil {
+            if self.version != nil {
+                return .version
+            }
+            return .remote
+        }
         if self.version != nil || self.source != nil { return .version }
+        if self.path != nil { return .local }
         if self.binary != nil { return .binarySwitch }
         return .unknown
     }
@@ -119,19 +142,42 @@ open class Dependency: MBCodableObject {
     }
 
     public var gitPointer: GitPointer? {
-        if let branch = branch {
-            return .branch(branch)
-        } else if let commit = commit {
-            return .commit(commit)
-        } else if let tag = tag {
-            return .tag(tag)
-        } else {
-            return nil
+        get {
+            if let branch = branch {
+                return .branch(branch)
+            } else if let commit = commit {
+                return .commit(commit)
+            } else if let tag = tag {
+                return .tag(tag)
+            } else {
+                return nil
+            }
+        }
+        set {
+            self.branch = nil
+            self.commit = nil
+            self.tag = nil
+            guard let value = newValue else {
+                return
+            }
+            switch value {
+            case .branch(let v):
+                self.branch = v
+            case .commit(let v):
+                self.commit = v
+            case .tag(let v):
+                self.tag = v
+            case .unknown(_): break
+            @unknown default: break
+            }
         }
     }
 
     open override var description: String {
         var value = [String]()
+        if let name = self.name {
+            value.append("`\(name)`")
+        }
         if let version = self.version {
             value.append(version)
         }
@@ -156,6 +202,9 @@ open class Dependency: MBCodableObject {
         if let binary = self.binary {
             value.append(binary ? "using binary" : "using source code")
         }
+        if let date = self.date {
+            value.append("at \(date.string())")
+        }
         return value.joined(separator: ", ")
     }
 
@@ -163,5 +212,43 @@ open class Dependency: MBCodableObject {
         return self.dictionary.keys.sorted().map {
             "\(self.dictionary[$0] ?? "")"
         }.joined().hashed(.md5) ?? "unknown"
+    }
+
+    open func merging(other: Dependency?) -> Dependency {
+        guard let other = other else { return self.copy() as! Dependency }
+        let dict = self.dictionary.merging(other.dictionary) { (_, new) in new }
+        return Dependency(dictionary: dict)
+    }
+
+    open func merge(other: Dependency?) {
+        guard let other = other else { return }
+        self.dictionary.merge(other.dictionary) { (_, new) in new }
+    }
+
+    open var root: Dependency {
+        guard self.name!.contains("/") else {
+            return self
+        }
+        let rootDp = self.copy() as! Dependency
+        rootDp.name = self.rootName
+        return rootDp
+    }
+}
+
+extension MBConfig.Repo {
+    public convenience init(feature: MBConfig.Feature, dependency: Dependency) {
+        self.init(feature: feature)
+        self.baseGitPointer = dependency.gitPointer
+        self.url = dependency.git
+        if let path = dependency.path {
+            self.path = path
+        }
+        if let url = self.url, let git = MBGitURL(url) {
+            self.resolveName(gitURL: git)
+        } else if let path = dependency.path {
+            self.resolveName(path: path)
+        } else {
+            self.name = dependency.name!
+        }
     }
 }

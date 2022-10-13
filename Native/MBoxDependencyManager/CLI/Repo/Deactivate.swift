@@ -2,13 +2,12 @@
 //  Deactivate.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2020/12/3.
+//  Created by Whirlwind on 2020/12/3.
 //  Copyright © 2020 com.bytedance. All rights reserved.
 //
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 extension MBCommander {
     open class Deactivate: Activate {
@@ -17,18 +16,12 @@ extension MBCommander {
             return "Deactivate a or more components"
         }
 
-        open override func handle(components: [Component]) throws {
-            for component in self.components {
-                if let name = component.name {
-                    UI.log(info: "[\(component.repo)] Deactivate component `\(name)` for \(component.tool)") {
-                        component.repo.deactivateComponent(name, for: component.tool)
-                    }
-                } else {
-                    UI.log(info: "[\(component.repo)] Deactivate all components for \(component.tool)") {
-                        component.repo.deactiveAllComponents(for: component.tool)
-                    }
-                }
-            }
+        open override func handle(repo: MBConfig.Repo, tool: MBDependencyTool) throws {
+            repo.deactiveAllComponents(for: tool)
+        }
+
+        open override func handle(component: MBWorkRepo.Component) throws {
+            component.repo?.model.deactivateComponent(component)
         }
     }
 }

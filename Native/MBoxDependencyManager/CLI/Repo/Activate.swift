@@ -2,7 +2,7 @@
 //  Activate.swift
 //  MBoxWorkspace
 //
-//  Created by 詹迟晶 on 2020/12/2.
+//  Created by Whirlwind on 2020/12/2.
 //  Copyright © 2020 bytedance. All rights reserved.
 //
 
@@ -12,30 +12,34 @@ import MBoxWorkspaceCore
 
 extension MBCommander {
     open class Activate: Repo {
-        open class Component: Equatable {
-            public static func == (lhs: MBCommander.Activate.Component, rhs: MBCommander.Activate.Component) -> Bool {
-                return lhs.name == rhs.name &&
-                    lhs.repo == rhs.repo &&
-                    lhs.tool == rhs.tool
-            }
-
-            open var name: String?
-            open var tool: MBDependencyTool
-            open var repo: MBConfig.Repo
-            public init(name: String? = nil, for tool: MBDependencyTool, in repo: MBConfig.Repo) {
-                self.name = name
-                self.tool = tool
-                self.repo = repo
-            }
-        }
-
         open class override var description: String? {
             return "Activate a or more components"
         }
 
+        open override class var example: String? {
+            let action = String(describing: self).lowercased()
+            return """
+# \(action.capitalizedFirstLetter) all components in all repositories
+$ mbox \(action) *
+
+# \(action.capitalizedFirstLetter) all components in the `repo1`
+$ mbox \(action) repo1
+# or
+$ mbox \(action) repo1/*
+
+# \(action.capitalizedFirstLetter) the component named `component1` in the `repo1`
+$ mbox \(action) repo1/component1
+
+# If the componment name is same with the repo name, the `name` will used as a component name:
+$ mbox \(action) name
+# If you want to \(action) the repo `name`, instead of \(action) the component `name`:
+$ mbox \(action) name/*
+"""
+        }
+
         open class override var arguments: [Argument] {
             var arguments = super.arguments
-            arguments << Argument("name", description: "Repo/Component Name", required: true)
+            arguments << Argument("name", description: "Component Name, '*' is all repositories, 'REPO/*' is all components in the REPO", required: true, plural: true)
             return arguments
         }
 
@@ -49,7 +53,7 @@ extension MBCommander {
         open var names: [String] = []
         open var tools: [MBDependencyTool] = []
 
-        open var components: [Component] = []
+        open var components: [MBWorkRepo.Component] = []
 
         open override func setup() throws {
             if let tools: [String] = self.shiftOptions("tool") {
@@ -67,105 +71,92 @@ extension MBCommander {
         }
 
         open override func validate() throws {
+            if self.names.isEmpty  {
+                throw ArgumentError.missingArgument("name")
+            }
+            if self.names.contains("*"), self.names.count > 1 {
+                var names = self.names
+                names.removeAll("*")
+                throw ArgumentError.invalidValue(value: names.joined(separator: "/"), argument: "name")
+            }
             try super.validate()
         }
 
         open override func run() throws {
             try super.run()
-            self.components = try self.fetchComponents(self.names, for: self.tools)
-            try self.handle(components: self.components)
+
+            var names = self.names
+            if names.contains("*") {
+                names = self.config.currentFeature.repos.map { $0.name + "/*" }
+            }
+
+            for name in names {
+                try self.handle(name: name, tools: self.tools)
+            }
+
             self.config.save()
+
+            self.config.currentFeature.saveChangedDependenciesLock()
         }
 
-        open func handle(components: [Component]) throws {
-            for component in self.components {
-                if let name = component.name {
-                    component.repo.activateComponent(name, for: component.tool)
+        private func handle(name: String, tools: [MBDependencyTool]) throws {
+            if name.hasSuffix("/*") {
+                let repoName = name.deleteSuffix("/*")
+                if let repo = self.fetchRepo(repoName) {
+                    for tool in tools {
+                        try self.handle(repo: repo, tool: tool)
+                    }
                 } else {
-                    component.repo.activeAllComponents(for: component.tool)
+                    throw UserError("[\(repoName)] Could not find the repository.")
                 }
+            } else if let components = self.fetchComponents(name, for: tools) {
+                for component in components {
+                    try self.handle(component: component)
+                }
+            } else if name.contains("/") {
+                var info = name.split(separator: "/")
+                let repoName = info.removeFirst()
+                let componentName = info.joined(separator: "/")
+                guard let repo = self.fetchRepo(name) else {
+                    throw UserError("[\(repoName)] Could not find the repository.")
+                }
+                guard let components = self.fetchComponents(componentName, in: repo, for: tools) else {
+                    throw UserError("[\(name)] Could not find the component.")
+                }
+                for component in components {
+                    try self.handle(component: component)
+                }
+            } else if let repo = self.fetchRepo(name) {
+                for tool in tools {
+                    try self.handle(repo: repo, tool: tool)
+                }
+            } else {
+                throw UserError("[\(name)] Could not find the component.")
             }
         }
 
-        open func fetchRepo(_ name: String) -> MBConfig.Repo? {
-            return self.config.currentFeature.repos.first {
-                $0.name.lowercased() == name.lowercased()
-            }
+        func fetchRepo(_ name: String) -> MBConfig.Repo? {
+            return self.config.currentFeature.findRepo(name: name, searchPackageName: false).first
         }
 
-        open func fetchDependency(_ name: String, for tool: MBDependencyTool) -> Component? {
-            for r in self.config.currentFeature.repos {
-                if let workRepo = r.workRepository,
-                   let (t, d) = workRepo.fetchDependency(name, for: tool) {
-                    return Component(name: d, for: t, in: r)
+        func fetchComponents(_ name: String, in repo: MBConfig.Repo? = nil, for tools: [MBDependencyTool]) -> [MBWorkRepo.Component]? {
+            let repos = (repo != nil) ? [repo!] : self.config.currentFeature.repos
+            for repo in repos {
+                if let components = repo.workRepository?.fetchComponents(name) {
+                    let filtered = components.filter { tools.contains($0.tool) }
+                    if filtered.isEmpty { continue }
+                    return filtered
                 }
             }
             return nil
         }
 
-        open func fetchComponent(_ name: String, for tool: MBDependencyTool) throws -> Component {
-            var info = name.split(separator: "/")
-            let repoName = String(info.removeFirst())
-            var componentName = info.joined(separator: "/")
-            var repo: MBConfig.Repo?
-            if let r = self.fetchRepo(repoName) {
-                repo = r
-            } else {
-                componentName = name
-            }
-            if let repo = repo {
-                if componentName.isEmpty {
-                    return Component(for: tool, in: repo)
-                }
-                if let workRepo = repo.workRepository, let (t, d) = workRepo.fetchDependency(componentName, for: tool) {
-                    return Component(name: d, for: t, in: repo)
-                }
-                throw UserError("Could not find component which named `\(componentName)` in repo `\(repo.name)`.")
-            } else {
-                if let component = self.fetchDependency(componentName, for: tool) {
-                    return component
-                }
-                throw UserError("Could not find component which named `\(name)`.")
-            }
+        open func handle(repo: MBConfig.Repo, tool: MBDependencyTool) throws {
+            repo.activeAllComponents(for: tool)
         }
 
-        open func fetchComponents(_ names: [String], for tools: [MBDependencyTool]) throws -> [Component] {
-            var v = [Component]()
-            for name in names {
-                var found = false
-                for tool in tools {
-                    guard let component = try? self.fetchComponent(name, for: tool) else {
-                        continue
-                    }
-                    found = true
-                    if component.name == nil {
-                        // 激活所有组件
-                        v.removeAll {
-                            $0.repo == component.repo && $0.tool == component.tool
-                        }
-                        v.append(component)
-                        continue
-                    }
-                    if v.contains(where: {
-                        $0.name == nil && $0.name == component.name && $0.tool == component.tool
-                    }) {
-                        // 已经激活所有组件
-                        continue
-                    }
-                    if !v.contains(where: { $0 == component }) {
-                        v.append(component)
-                    }
-                }
-                if !found {
-                    throw UserError("Could not find component which named `\(name)`.")
-                }
-            }
-            return v.sorted {
-                $0.repo.name >= $1.repo.name &&
-                    $0.tool >= $1.tool &&
-                    ($0.name ?? "") >= ($1.name ?? "")
-            }
+        open func handle(component: MBWorkRepo.Component) throws {
+            component.repo?.model.activateComponent(component)
         }
-
     }
 }

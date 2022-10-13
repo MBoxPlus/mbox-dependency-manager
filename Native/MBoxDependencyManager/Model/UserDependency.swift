@@ -2,13 +2,12 @@
 //  UserDependency.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2020/1/7.
+//  Created by Whirlwind on 2020/1/7.
 //  Copyright © 2020 com.bytedance. All rights reserved.
 //
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
 
 open class UserDependency: Dependency {
 
@@ -16,7 +15,7 @@ open class UserDependency: Dependency {
     public var tools: [MBDependencyTool]?
 
     func isUseTool(_ tool: MBDependencyTool?) -> Bool {
-        guard let tools = self.tools else { return tool == nil }
+        guard let tools = self.tools else { return true }
         if let tool = tool {
             return tools.contains(tool)
         }

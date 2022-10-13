@@ -2,7 +2,7 @@
 //  MBDependencyTool.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2021/1/25.
+//  Created by Whirlwind on 2021/1/25.
 //  Copyright © 2021 com.bytedance. All rights reserved.
 //
 
@@ -10,7 +10,11 @@ import Foundation
 import MBoxCore
 
 
-public class MBDependencyTool {
+public class MBDependencyTool: Decodable {
+    required public init(from decoder: Decoder) throws {
+        self.name = try decoder.singleValueContainer().decode(String.self)
+    }
+
     required public init() {
     }
 
@@ -21,7 +25,7 @@ public class MBDependencyTool {
 
     public static func load(fromObject object: Any) throws -> Self {
         guard let name = object as? String else {
-            throw NSError(domain: "Convert Error", code: 0, userInfo: [NSLocalizedDescriptionKey: "类型不匹配 \(self): \(object)"])
+            throw NSError(domain: "Convert Error", code: 0, userInfo: [NSLocalizedDescriptionKey: "Type mismatch \(self): \(object)"])
         }
         return MBDependencyTool(name) as! Self
     }
@@ -76,5 +80,12 @@ extension MBDependencyTool: CodableType {
 extension MBDependencyTool: MBCodable {
     public func toCodableObject() -> Any? {
         return self.name
+    }
+}
+
+extension MBDependencyTool: Encodable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.name)
     }
 }

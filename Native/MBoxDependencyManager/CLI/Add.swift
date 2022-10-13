@@ -2,24 +2,24 @@
 //  Add.swift
 //  MBoxDependencyManager
 //
-//  Created by 詹迟晶 on 2020/4/10.
+//  Created by Whirlwind on 2020/4/10.
 //  Copyright © 2020 com.bytedance. All rights reserved.
 //
 
 import Foundation
 import MBoxCore
-import MBoxWorkspaceCore
+import MBoxWorkspace
 
 var MBCommanderAddComponent: UInt8 = 0
 var MBCommanderAddTool: UInt8 = 0
 var MBCommanderDisableAllComponents: UInt8 = 0
 var MBCommanderActivateAllComponents: UInt8 = 0
 extension MBCommander.Add {
-    open func convertTools(_ tools: [String]?, in repo: MBConfig.Repo) -> (used: [MBDependencyTool], unused: [MBDependencyTool]) {
+    public func convertTools(_ tools: [String]?, in repo: MBConfig.Repo) -> (used: [MBDependencyTool], unused: [MBDependencyTool]) {
         guard let workRepo = repo.workRepository else {
             return (used: [], unused: [])
         }
-        let allTools = Array(workRepo.dependencyNamesByTool.keys)
+        let allTools = Array(workRepo.componentsByTool.keys)
         guard let userTools = tools else {
             return (used: allTools, unused: [])
         }
@@ -37,78 +37,97 @@ extension MBCommander.Add {
         )
     }
 
-    //                          --activate    | --no-actiavte   |  Default
-    // add repo                 activate all  |  disable all    |  activate all
+    //                              --activate    | --no-actiavte   |  Default
+    // add repo                     activate all  |  disable all    |  activate all
 
-    // add component            activate all  |  activate one   |  activate one
-    // add repo --component     actiavte all  |  activate one   |  actiavte one
-    open func willActivateAllComponents(_ repo: MBWorkRepo) -> Bool {
+    // add component                activate all  |  activate one   |  activate one
+    // add repo --component         actiavte all  |  activate one   |  actiavte one
+    // add component --component    actiavte all  |  activate one   |  actiavte one
+    //
+    // If the `NAME` is both a repo name and a component name, first be repo.
+    public func willActivatedComponents(_ repo: MBWorkRepo) -> [String]? {
         var activateAll: Bool?
         if let activateAllComponents = self.activateAllComponents {
-            UI.log(info: "Value of activate_all_components is `\(activateAllComponents)` for the `\(repo.name)` according to command flags!")
+            UI.log(verbose: "[\(repo)] Activate all components: \(activateAllComponents), by `-\(activateAllComponents ? "" : "-no")-activate-all-components`")
             activateAll = activateAllComponents
         } else if self.isFirstAdd == true,
                   let activateAllComponents = repo.setting.dependencyManager?.activateAllComponentsAfterAddRepo {
-            UI.log(info: "Value of activate_all_components is `\(activateAllComponents)` for the `\(repo.name)` according to the `dependency_manager.activate_all_components_after_add_repo` in the `\(self.workspace.relativePath(repo.setting.filePath!))`!")
+            UI.log(verbose: "[\(repo)] Activate all components: \(activateAllComponents), by the setting `dependency_manager.activate_all_components_after_add_repo` in repo")
             activateAll = activateAllComponents
         } else if self.isFirstAdd == true,
                   let activateAllComponents = MBSetting.merged.dependencyManager?.activateAllComponentsAfterAddRepo {
-            UI.log(info: "Value of activate_all_components is `\(activateAllComponents)` for the `\(repo.name)` according to the global/workspace settings!")
+            UI.log(verbose: "[\(repo)] Activate all components: \(activateAllComponents), by the global/workspace setting")
             activateAll = activateAllComponents
         }
-        if let result = activateAll {
-            return result
-        } else if !self.searchedByComponentName() {
-            return true
+        if let activateAll = activateAll {
+            if activateAll {
+                return [] // All
+            } else if !self.searchedByComponentName, self.components == nil {
+                return nil // None
+            }
+        } else if self.searchedByRepoName, self.components == nil {
+            return [] // All
         }
-        return false
+        var components = self.components
+        if components == nil, let name = self.name {
+            components = [name]
+        }
+        if let components  = components {
+            UI.log(info: "[\(repo)] Activate components:", items: components)
+            return components
+        } else {
+            return [] // All
+        }
+    }
+    
+    @_dynamicReplacement(for: run())
+    public func dp_run() throws {
+        try self.run()
+        try self.dependenciesConfig()
     }
 
-    @_dynamicReplacement(for: run())
-    open func dp_run() throws {
-        try self.run()
+    dynamic
+    public func dependenciesConfig() throws{
         self.cleanLocalDependencies()
 
         if let repo = self.addedRepo, let workRepo = repo.workRepository {
-            let activateAll = self.willActivateAllComponents(workRepo)
+            let components = self.willActivatedComponents(workRepo)
             let (usedTools, unusedTools) = self.convertTools(self.tools, in: repo)
-            if activateAll {
-                repo.activeAllComponents(for: usedTools)
-                if self.isFirstAdd == true {
-                    repo.deactiveAllComponents(for: unusedTools)
-                }
-            } else if self.searchedByComponentName() {
-                var components = self.components
-                if components == nil, let name = self.name {
-                    components = [name]
-                }
-                if let components = components {
+            if let components = components {
+                if components.isEmpty { // Activate All
+                    repo.activeAllComponents(for: usedTools)
+                    if self.isFirstAdd == true {
+                        repo.deactiveAllComponents(for: unusedTools)
+                    }
+                } else {
                     for tool in usedTools {
                         repo.activateComponents(components, for: tool, override: self.isFirstAdd!)
                     }
+                    if self.isFirstAdd == true {
+                        repo.deactiveAllComponents(for: unusedTools)
+                    }
                 }
-                if self.isFirstAdd == true {
-                    repo.deactiveAllComponents(for: unusedTools)
-                }
-            } else {
-                let allTools = Array(workRepo.dependencyNamesByTool.keys)
+            } else { // Deactivate All
+                let allTools = Array(workRepo.componentsByTool.keys)
                 repo.deactiveAllComponents(for: allTools)
             }
         }
         self.config.save()
+        self.config.currentFeature.saveChangedDependenciesLock()
     }
 
     @_dynamicReplacement(for: searchRepo(by:))
-    open func dp_searchRepo(by name: String) throws -> MBConfig.Repo? {
+    public func dp_searchRepo(by name: String) throws -> MBConfig.Repo? {
         var repo = try self.searchRepo(by: name)
-        if repo == nil {
-            repo = try self.workspace.searchRepo(by: [name])
+        if repo == nil,
+           let dependency = try self.workspace.searchDependency(by: [name]) {
+            repo = MBConfig.Repo(feature: self.config.currentFeature, dependency: dependency)
         }
         return repo
     }
 
     @_dynamicReplacement(for: options)
-    open class var dp_Option: [Option] {
+    public class var dp_Option: [Option] {
         var options = self.options
         options << Option("component", description: "Activate a component, only for `URL`/`PATH`")
         options << Option("tool", description: "Use the specified dependency management tool")
@@ -116,27 +135,22 @@ extension MBCommander.Add {
     }
 
     @_dynamicReplacement(for: flags)
-    open class var dp_flags: [Flag] {
+    public class var dp_flags: [Flag] {
         var flags = self.flags
-        flags << Flag("activate-all-components", description: "Activate all component. Default value will be true if add a repo, while default value will be false if add a component. Use `mbox config dependency_manager.activate_all_components_after_add_repo true/false` to change the default behavior.")
-        flags << Flag("disable-all-components", description: "Deprecated. Please use `--activate-all-components` instead.")
+        flags << Flag("activate-all-components", description: "Activate all components. Default value will be true if add a repo, while default value will be false if add a component. Use `mbox config dependency_manager.activate_all_components_after_add_repo true/false` to change the default behavior.")
         return flags
     }
 
 
     @_dynamicReplacement(for: setup())
-    open func dp_setup() throws {
+    public func dp_setup() throws {
         self.activateAllComponents = self.shiftFlag("activate-all-components")
-        if self.activateAllComponents == nil,
-           let disableAllComponents = self.shiftFlag("disable-all-components") {
-            self.activateAllComponents = !disableAllComponents
-        }
         self.components = self.shiftOptions("component")
         self.tools = self.shiftOptions("tool")
         try self.setup()
     }
 
-    open var components: [String]? {
+    public var components: [String]? {
         set {
             associateObject(base: self, key: &MBCommanderAddComponent, value: newValue)
         }
@@ -145,7 +159,7 @@ extension MBCommander.Add {
         }
     }
 
-    open var tools: [String]? {
+    public var tools: [String]? {
         set {
             associateObject(base: self, key: &MBCommanderAddTool, value: newValue)
         }
@@ -154,7 +168,7 @@ extension MBCommander.Add {
         }
     }
 
-    open var activateAllComponents: Bool? {
+    public var activateAllComponents: Bool? {
         set {
             associateObject(base: self, key: &MBCommanderActivateAllComponents, value: newValue)
         }
@@ -164,20 +178,19 @@ extension MBCommander.Add {
     }
 
     @_dynamicReplacement(for: fetchCommitToCheckout(repo:))
-    open func dp_fetchCommitToCheckout(repo: MBConfig.Repo) throws {
-        if let components = self.components {
-            repo.additionalPackageNames.append(contentsOf: components)
-        }
-        if let repo2 = try self.workspace.searchDependency(by: repo.packageNames, createdRepo: repo) {
-            repo.url ?= repo2.url
-            if let path = repo2._path {
+    public func dp_fetchCommitToCheckout(repo: MBConfig.Repo) throws {
+        try self.fetchCommitToCheckout(repo: repo)
+        let components = self.components ?? []
+        if let dependency = try self.workspace.searchDependency(by: components, createdRepo: repo) {
+            repo.url ?= dependency.git
+            if let path = dependency.path {
                 repo.path = path
             }
-            repo.baseGitPointer ?= repo2.baseGitPointer
+            repo.baseGitPointer ?= dependency.gitPointer
         }
     }
 
-    open func cleanLocalDependencies() {
+    public func cleanLocalDependencies() {
         UI.section("Remove Local Dependency") {
             self.addedRepo?.packageNames.forEach { name in
                 UI.log(verbose: "removing `\(name)`") {
@@ -188,15 +201,26 @@ extension MBCommander.Add {
         }
     }
 
-    open func searchedByComponentName() -> Bool {
-        if self.components?.count ?? 0 > 0 {
+    public var searchedByRepoName: Bool {
+        guard let name = self.name else { return false }
+        if let repo = self.addedRepo,
+           repo.name.lowercased() == name.lowercased() {
             return true
         }
-        if let name = self.name,
-           let repo = self.addedRepo?.workRepository,
-           repo.dependencyNames.first(where: { $0.lowercased() == name.lowercased() }) != nil {
-          return true
+        if let repo = self.addedRepo?.workRepository,
+           repo.name.lowercased() == name.lowercased() {
+            return true
         }
         return false
+    }
+
+    public var searchedByComponentName: Bool {
+        guard let name = self.name?.lowercased(),
+              let repo = self.addedRepo?.workRepository else {
+            return false
+        }
+        return repo.components.contains {
+            $0.isName(name)
+        }
     }
 }
